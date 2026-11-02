@@ -3,52 +3,52 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
-<meta name="theme-color" content="#1a2744"/>
+<meta name="theme-color" content="#5d4037"/>
 <title>Ферма на краю света</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#070b14;color:#eee;touch-action:manipulation}
-#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;position:relative;overflow:hidden;background:#0a1520}
-.topbar{display:flex;gap:6px;padding:8px;padding-top:max(8px,env(safe-area-inset-top));background:rgba(0,0,0,.55);backdrop-filter:blur(10px);flex-wrap:wrap;align-items:center;z-index:30}
-.stat{background:rgba(36,48,68,.92);border-radius:12px;padding:5px 9px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:3px;border:1px solid rgba(255,255,255,.08)}
-.btn{border:none;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:800;cursor:pointer;background:#ffd54f;color:#1a1f2e}
-.btn:active{transform:scale(.96)}
-.btn.ghost{background:rgba(255,255,255,.12);color:#fff}
-.btn.danger{background:#f44336;color:#fff}
+html,body{height:100%;overflow:hidden;font-family:"Trebuchet MS",system-ui,Segoe UI,Roboto,sans-serif;background:#2e1c0f;color:#fff8e1;touch-action:manipulation}
+#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;position:relative;overflow:hidden;background:linear-gradient(180deg,#3e2723,#1b100a)}
+.topbar{display:flex;gap:6px;padding:8px;padding-top:max(8px,env(safe-area-inset-top));background:linear-gradient(180deg,#8d6e63,#5d4037);border-bottom:3px solid #3e2723;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 4px 12px rgba(0,0,0,.35);flex-wrap:wrap;align-items:center;z-index:30}
+.stat{background:linear-gradient(180deg,#fff8e1,#ffe0b2);color:#4e342e;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;display:flex;align-items:center;gap:3px;border:2px solid #a1887f;box-shadow:inset 0 1px 0 #fff,0 2px 0 #6d4c41}
+.btn{border:none;border-radius:14px;padding:8px 14px;font-size:13px;font-weight:900;cursor:pointer;background:linear-gradient(180deg,#ffd54f,#f9a825);color:#3e2723;border:2px solid #ef6c00;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 3px 0 #e65100}
+.btn:active{transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 1px 0 #e65100}
+.btn.ghost{background:linear-gradient(180deg,#bcaaa4,#8d6e63);color:#fff8e1;border-color:#5d4037;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 3px 0 #3e2723}
+.btn.danger{background:linear-gradient(180deg,#ef5350,#c62828);color:#fff;border-color:#8e0000}
 .btn:disabled{opacity:.45}
-.zonebar{display:flex;gap:6px;padding:6px 8px;overflow-x:auto;z-index:25;background:rgba(0,0,0,.28)}
-.zbtn{flex-shrink:0;border:none;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;background:rgba(255,255,255,.12);color:#fff}
-.zbtn.on{background:#ffd54f;color:#1a1f2e}
+.zonebar{display:flex;gap:6px;padding:6px 8px;overflow-x:auto;z-index:25;background:rgba(62,39,35,.75)}
+.zbtn{flex-shrink:0;border:none;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:800;background:linear-gradient(180deg,#a1887f,#6d4c41);color:#fff8e1;border:2px solid #4e342e;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.zbtn.on{background:linear-gradient(180deg,#ffd54f,#ffb300);color:#3e2723;border-color:#ef6c00}
 .zbtn:disabled{opacity:.35}
-.stage{flex:1;position:relative;min-height:0;z-index:5}
+.stage{flex:1;position:relative;min-height:0;z-index:5;background:#4fc3f7}
 #game{display:block;width:100%;height:100%;touch-action:none}
-.order-chip{position:absolute;left:8px;right:8px;top:8px;z-index:20;background:rgba(0,0,0,.55);border:1px solid rgba(255,213,79,.4);border-radius:14px;padding:8px 10px;font-size:12px;display:none;backdrop-filter:blur(6px)}
-.story{position:absolute;left:8px;right:8px;bottom:8px;z-index:20;font-size:11px;background:rgba(0,0,0,.5);border-left:3px solid #b39ddb;padding:8px 10px;border-radius:0 12px 12px 0;line-height:1.35;max-height:64px;overflow:auto}
-.toolbar{display:flex;gap:6px;padding:8px;padding-bottom:max(8px,env(safe-area-inset-bottom));background:rgba(0,0,0,.65);backdrop-filter:blur(12px);overflow-x:auto;z-index:30}
-.tool{min-width:66px;padding:8px 6px;border-radius:14px;border:2px solid transparent;background:#243044;color:#fff;font-size:11px;font-weight:700;text-align:center;flex-shrink:0}
-.tool.active{border-color:#ffd54f;background:#3a4a66;box-shadow:0 0 10px rgba(255,213,79,.25)}
-.tool .t-ico{font-size:20px;display:block}
-.tool .t-price{opacity:.75;font-size:10px}
-.toast{position:absolute;left:50%;top:78px;transform:translateX(-50%);background:rgba(0,0,0,.88);padding:10px 16px;border-radius:12px;font-size:13px;z-index:60;max-width:92%;text-align:center;pointer-events:none;opacity:0;transition:opacity .25s}
+.order-chip{position:absolute;left:8px;right:8px;top:8px;z-index:20;background:linear-gradient(180deg,#fff8e1,#ffe0b2);color:#4e342e;border:3px solid #a1887f;border-radius:16px;padding:8px 10px;font-size:12px;font-weight:700;display:none;box-shadow:0 4px 0 #6d4c41}
+.story{position:absolute;left:8px;right:8px;bottom:8px;z-index:20;font-size:11px;background:rgba(62,39,35,.82);border-left:4px solid #ffd54f;padding:8px 10px;border-radius:0 12px 12px 0;line-height:1.35;max-height:64px;overflow:auto;color:#fff8e1}
+.toolbar{display:flex;gap:6px;padding:8px;padding-bottom:max(8px,env(safe-area-inset-bottom));background:linear-gradient(180deg,#8d6e63,#4e342e);border-top:3px solid #3e2723;box-shadow:inset 0 1px 0 rgba(255,255,255,.2);overflow-x:auto;z-index:30}
+.tool{min-width:68px;padding:8px 6px;border-radius:16px;border:3px solid #5d4037;background:linear-gradient(180deg,#efebe9,#bcaaa4);color:#3e2723;font-size:11px;font-weight:800;text-align:center;flex-shrink:0;box-shadow:inset 0 1px 0 #fff,0 3px 0 #3e2723}
+.tool.active{border-color:#ffd54f;background:linear-gradient(180deg,#fff59d,#ffca28);box-shadow:inset 0 1px 0 #fff,0 0 12px rgba(255,213,79,.55),0 3px 0 #f57f17}
+.tool .t-ico{font-size:22px;display:block;filter:drop-shadow(0 2px 0 rgba(0,0,0,.2))}
+.tool .t-price{opacity:.8;font-size:10px}
+.toast{position:absolute;left:50%;top:78px;transform:translateX(-50%);background:linear-gradient(180deg,#5d4037,#3e2723);padding:10px 16px;border-radius:14px;font-size:13px;font-weight:700;z-index:60;max-width:92%;text-align:center;pointer-events:none;opacity:0;transition:opacity .25s;border:2px solid #a1887f;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 .toast.show{opacity:1}
-.modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.68);z-index:50;display:none;align-items:flex-end}
+.modal-bg{position:absolute;inset:0;background:rgba(30,15,5,.72);z-index:50;display:none;align-items:flex-end}
 .modal-bg.open{display:flex}
-.modal{background:#1a2233;border-radius:20px 20px 0 0;width:100%;max-height:80%;overflow:auto;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom));border-top:2px solid rgba(255,213,79,.3)}
-.modal h2{font-size:18px;margin-bottom:8px}
-.modal p{font-size:13px;opacity:.88;margin-bottom:10px;line-height:1.45}
-.row{display:flex;align-items:center;gap:10px;padding:10px;background:#243044;border-radius:12px;margin-bottom:8px}
-.row .name{flex:1;font-weight:700;font-size:14px}
-.row .price{color:#ffd54f;font-weight:800}
-.delta.up{color:#81c784;font-size:11px}
-.delta.down{color:#ef9a9a;font-size:11px}
+.modal{background:linear-gradient(180deg,#efebe9,#d7ccc8);color:#3e2723;border-radius:22px 22px 0 0;width:100%;max-height:80%;overflow:auto;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom));border-top:4px solid #ffd54f;box-shadow:0 -8px 24px rgba(0,0,0,.35)}
+.modal h2{font-size:18px;margin-bottom:8px;color:#5d4037}
+.modal p{font-size:13px;opacity:.9;margin-bottom:10px;line-height:1.45}
+.row{display:flex;align-items:center;gap:10px;padding:10px;background:linear-gradient(180deg,#fff8e1,#ffe0b2);border-radius:14px;margin-bottom:8px;border:2px solid #bcaaa4}
+.row .name{flex:1;font-weight:800;font-size:14px}
+.row .price{color:#ef6c00;font-weight:900}
+.delta.up{color:#2e7d32;font-size:11px}
+.delta.down{color:#c62828;font-size:11px}
 .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
-.tab{padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:none;color:#fff;font-size:12px;font-weight:700}
-.tab.on{background:#ffd54f;color:#1a1f2e}
-.hint{font-size:11px;opacity:.7;margin-top:3px}
-#intro{position:absolute;inset:0;z-index:80;background:radial-gradient(ellipse at 50% 20%,#2a3a6a,#0a1020 70%);display:flex;flex-direction:column;justify-content:center;padding:28px;text-align:center}
-#intro h1{font-size:26px;margin:10px 0 8px;background:linear-gradient(90deg,#ffd54f,#e91e8c,#80d8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900}
-#intro p{font-size:14px;opacity:.92;margin-bottom:18px;line-height:1.5}
-#intro canvas{width:160px;height:120px;margin:0 auto 8px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.5))}
+.tab{padding:6px 12px;border-radius:999px;background:#a1887f;border:2px solid #6d4c41;color:#fff8e1;font-size:12px;font-weight:800}
+.tab.on{background:linear-gradient(180deg,#ffd54f,#ffb300);color:#3e2723;border-color:#ef6c00}
+.hint{font-size:11px;opacity:.75;margin-top:3px}
+#intro{position:absolute;inset:0;z-index:80;background:radial-gradient(ellipse at 50% 20%,#81d4fa,#5d4037 75%);display:flex;flex-direction:column;justify-content:center;padding:28px;text-align:center}
+#intro h1{font-size:26px;margin:10px 0 8px;background:linear-gradient(90deg,#ffd54f,#ff8a65,#80d8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
+#intro p{font-size:14px;opacity:.95;margin-bottom:18px;line-height:1.5;color:#fff8e1;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+#intro canvas{width:180px;height:140px;margin:0 auto 8px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
 </style>
 </head>
 <body>
@@ -56,8 +56,8 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,Segoe 
   <div id="intro">
     <canvas id="intro-art" width="160" height="120"></canvas>
     <h1>Ферма на краю света</h1>
-    <p>Парящий остров осыпается. Корми Сердце, скрещивай семена, ухаживай за животными. Объёмная изометрическая 2.5D-ферма офлайн.</p>
-    <p style="opacity:.6;font-size:12px;margin-bottom:10px">v1.3.0</p>
+    <p>Парящий остров осыпается. Корми Сердце, скрещивай семена, ухаживай за животными. Уютная ферма в духе классических casual-игр.</p>
+    <p style="opacity:.7;font-size:12px;margin-bottom:10px">v1.4.0</p>
     <button class="btn" id="btn-start" style="font-size:16px;padding:14px 28px;margin:0 auto">Начать игру</button>
     <button class="btn ghost" id="btn-continue" style="margin:12px auto 0;display:none">Продолжить</button>
   </div>
