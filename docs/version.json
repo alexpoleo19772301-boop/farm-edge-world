@@ -3,7 +3,7 @@
   "versionCode": 2,
   "apkUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/farm-edge-world-debug.apk",
   "webVersion": "1.1.0",
-  "webBundleUrl": "https://alexpoleo19772301-boop.github.io/farm-edge-world/www.zip",
+  "webBundleUrl": "https://cdn.jsdelivr.net/gh/alexpoleo19772301-boop/farm-edge-world@main/docs/www.zip",
   "force": false,
-  "changelog": "• Автообновления через GitHub\n• Живой www.zip без переустановки\n• Манифест на GitHub Pages"
+  "changelog": "• Автообновления через GitHub (jsDelivr + Releases)\n• Живой www.zip без переустановки\n• Манифест со стабильным CORS"
 }
