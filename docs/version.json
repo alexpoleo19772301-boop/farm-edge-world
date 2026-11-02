@@ -1,9 +1,9 @@
 {
-  "version": "1.4.0",
-  "versionCode": 10400,
+  "version": "1.5.0",
+  "versionCode": 10500,
   "apkUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/farm-edge-world-debug.apk",
-  "webVersion": "1.4.0",
+  "webVersion": "1.5.0",
   "webBundleUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/www.zip",
   "force": false,
-  "changelog": "• Графика в духе классических casual-ферм: оригинальные bitmap-спрайты (WebP)\n• Парящий остров, грядки, культуры, животные, дом, колодец, ларёк, пугало\n• Тёплый деревянный UI, тени, анимации, depth-sort\n• Не копия Farm Frenzy — свой дизайн острова и построек"
+  "changelog": "• v1.5.0: широкое игровое поле в стиле Farm Frenzy (трава на весь экран, тропинки, грядки отдельно, загон с забором, постройки по краям)\n• Убраны magenta-ореолы у спрайтов (despill + erode alpha)\n• Чистые тап-цели без наложений\n• Сохранения и RU-интерфейс без изменений"
 }
