@@ -1,9 +1,9 @@
 {
-  "version": "1.2.0",
-  "versionCode": 10200,
+  "version": "1.3.0",
+  "versionCode": 10300,
   "apkUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/farm-edge-world-debug.apk",
-  "webVersion": "1.2.0",
+  "webVersion": "1.3.0",
   "webBundleUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/www.zip",
   "force": false,
-  "changelog": "• Объёмная 2D-графика на canvas: остров в 2.5D, тени, градиенты\n• Анимации: колыхание культур, рост, сбор с частицами, монеты к счётчику\n• Животные ходят/стоят, остров покачивается, облака с параллаксом\n• День/ночь с тоном, дождь и шторм частицами\n• Спрайты грядок, культур, зданий, пугал, вредителей и Сердца острова"
+  "changelog": "• Ещё более объёмная 2.5D-графика в духе Hay Day\n• Толстый остров со слоистыми скалами, травой и кромкой\n• Грядки — приподнятые изометрические блоки с боковинами\n• Изометрический дом с объёмной крышей, деревья, кусты, камни, забор\n• AO, тени, блики, vignette/bloom, камера ближе — ферма заполняет экран"
 }
