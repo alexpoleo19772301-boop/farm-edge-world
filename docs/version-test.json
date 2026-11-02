@@ -1,0 +1,9 @@
+{
+  "version": "1.2.0",
+  "versionCode": 10200,
+  "apkUrl": "http://127.0.0.1:9876/farm-edge-world-debug.apk",
+  "webVersion": "1.2.0",
+  "webBundleUrl": "http://127.0.0.1:9876/dist/www.zip",
+  "force": false,
+  "changelog": "• Тестовое обновление\n• Проверка диалога"
+}

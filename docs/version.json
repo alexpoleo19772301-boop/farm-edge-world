@@ -1,9 +1,9 @@
 {
-  "version": "1.7.0",
-  "versionCode": 10700,
+  "version": "2.0.0",
+  "versionCode": 20000,
   "apkUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/farm-edge-world-debug.apk",
-  "webVersion": "1.7.0",
+  "webVersion": "2.0.0",
   "webBundleUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/www.zip",
   "force": false,
-  "changelog": "• v1.7.0: настоящий звук — музыка дня/ночи, амбиент (птицы/сверчки/дождь/шторм), SFX (тап, посадка, полив, урожай, монета, покупка, уровень, животные, вредитель…)\n• Громкость музыки/эффектов и mute в «Книге», сохраняются\n• Разблокировка Web Audio по первому касанию; пауза в фоне; Android mediaPlaybackRequiresUserGesture=false\n• Аудио CC0 (синтез), см. CREDITS.md · ~320KB ogg"
+  "changelog": "• v2.0.0: новая игра «Слияние на острове» (Merge Island)\n• Поле 7×9, drag&drop слияния (2→tier+1, 5→бонус), 5 цепочек по 9 уровней, генераторы и энергия\n• Заказы персонажей, монеты/кристаллы/XP, восстановление зон острова, сюжет, дневные задания\n• Оригинальные cartoon-спрайты, звук (старый + merge SFX), обучение, RU UI, сейв merge_island_v1\n• Веб на GitHub Pages; OTA как раньше. Ферма сохранена в теге farm-final"
 }

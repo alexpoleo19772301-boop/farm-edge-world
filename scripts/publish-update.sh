@@ -60,6 +60,14 @@ cp -f android/app/build/outputs/apk/debug/app-debug.apk farm-edge-world-debug.ap
 cp -f farm-edge-world-debug.apk "dist/farm-edge-$VER-debug.apk"
 cp -f version.json dist/version.json
 cp -f docs/www.zip dist/www.zip
+# GitHub Pages (/docs): publish playable web build
+rm -rf docs/assets docs/index.html docs/game.js 2>/dev/null || true
+cp -a www/. docs/
+touch docs/.nojekyll
+# restore release helpers overwritten by www copy if any
+cp -f version.json docs/version.json
+cp -f dist/www.zip docs/www.zip
+
 
 git add -A
 git commit -m "Release v${VER}" || echo "nothing to commit"

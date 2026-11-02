@@ -1,7 +1,7 @@
 {
   "name": "farm-edge-world",
   "version": "1.0.0",
-  "description": "Ферма на краю света",
+  "description": "Слияние на острове — merge game",
   "private": true,
   "dependencies": {
     "@capacitor/android": "^6.2.3",

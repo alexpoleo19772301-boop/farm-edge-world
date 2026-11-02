@@ -1,26 +1,19 @@
-# Credits — Ферма на краю света
+# Credits — Слияние на острове
 
-## Audio (v1.7.0)
+## Audio
 
-All game audio under `www/assets/audio/*.ogg` was **originally synthesized** for this project
-(Python + NumPy procedural tones/noise, encoded with ffmpeg/libvorbis).
+Most SFX/music under `www/assets/audio/*.ogg` were originally synthesized (Python + NumPy, ffmpeg/libvorbis) for this project — **CC0**.
+Merge-specific: `sfx_merge`, `sfx_merge5`, `sfx_pop`, `sfx_sparkle`, `sfx_whoosh` (CC0 synth).
+Day music / ambient birds reused from farm v1.7 synth set (CC0).
 
-**License:** CC0 1.0 Universal (Public Domain Dedication) — original work, no third-party samples.
+## Art (v2.0.0)
 
-Files:
-- Music: `music_day.ogg`, `music_night.ogg`
-- Ambient: `amb_birds.ogg`, `amb_crickets.ogg`, `amb_rain.ogg`, `amb_storm.ogg`
-- SFX: `sfx_tap`, `sfx_plant`, `sfx_water`, `sfx_harvest`, `sfx_coin`, `sfx_purchase`,
-  `sfx_levelup`, `sfx_unlock`, `sfx_notify`, `sfx_squish`, `sfx_moo`, `sfx_cluck`, `sfx_baa`
+Original bright cartoon sprites generated for this game (GenerateImage), sliced to transparent WebP.
+Not copied from Merge Mansion / Travel Town — those titles were style references only.
 
-Generator script: `scripts/gen_audio.py` (reproducible).
-
-## Art
-
-Original bitmap sprites created for this game (not copied from Farm Frenzy or other titles).
-Farm Frenzy was used only as a style reference per user request.
+Chains: wood, stone, flower, tools, food · Generators · Buildings (ruined/restored) · Characters · Island background · App icon.
 
 ## Engine
 
 - Capacitor / Android WebView
-- HTML5 Canvas + Web Audio API
+- HTML/CSS/Canvas + Web Audio API
