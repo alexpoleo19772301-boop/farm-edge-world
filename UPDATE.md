@@ -2,11 +2,10 @@
 
 ## Публичные URL (v1.1.0)
 - Репозиторий: https://github.com/alexpoleo19772301-boop/farm-edge-world
-- Манифест (jsDelivr, CORS *): https://cdn.jsdelivr.net/gh/alexpoleo19772301-boop/farm-edge-world@main/docs/version.json
-- Web bundle (jsDelivr): https://cdn.jsdelivr.net/gh/alexpoleo19772301-boop/farm-edge-world@main/docs/www.zip
-- APK (GitHub Release latest): https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/farm-edge-world-debug.apk
-- Зеркало Pages (после деплоя): https://alexpoleo19772301-boop.github.io/farm-edge-world/version.json
-- Raw: https://raw.githubusercontent.com/alexpoleo19772301-boop/farm-edge-world/main/docs/version.json
+- Манифест: https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/version.json
+- Web bundle: https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/www.zip
+- APK: https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/farm-edge-world-debug.apk
+- Зеркало в репо (docs/, jsDelivr): https://cdn.jsdelivr.net/gh/alexpoleo19772301-boop/farm-edge-world@main/docs/version.json
 
 ## Публикация
 ```bash
