@@ -1,0 +1,11 @@
+{
+  "appId": "com.farmedge.world",
+  "appName": "Ферма на краю света",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+android-sdk/
+android/.gradle/
+android/app/build/
+android/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+android/.idea/
+*.iml
+.DS_Store
+dist/*.apk
+farm-edge-world-debug.apk
+www/version-test.json
