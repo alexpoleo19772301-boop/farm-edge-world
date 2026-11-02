@@ -1,9 +1,9 @@
 {
-  "version": "1.5.0",
-  "versionCode": 10500,
+  "version": "1.6.0",
+  "versionCode": 10600,
   "apkUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/farm-edge-world-debug.apk",
-  "webVersion": "1.5.0",
+  "webVersion": "1.6.0",
   "webBundleUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/www.zip",
   "force": false,
-  "changelog": "• v1.5.0: широкое игровое поле в стиле Farm Frenzy (трава на весь экран, тропинки, грядки отдельно, загон с забором, постройки по краям)\n• Убраны magenta-ореолы у спрайтов (despill + erode alpha)\n• Чистые тап-цели без наложений\n• Сохранения и RU-интерфейс без изменений"
+  "changelog": "• v1.6.0: снова плавающий остров (как в v1.4), заметно шире (~на всю ширину поля) и ниже — меньше пустоты снизу\n• Сохранены чистые спрайты без magenta-ореолов из v1.5\n• Объекты разнесены, сетка грядок на острове, тень/объём утёса\n• Сохранения и RU без изменений"
 }

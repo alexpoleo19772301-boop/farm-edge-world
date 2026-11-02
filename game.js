@@ -120,7 +120,7 @@ function genOrder(){const unlocked=Object.values(CROPS).filter(c=>!c.hybrid&&sta
 function renderOrder(){const el=document.getElementById('order-chip');if(!state.order){el.style.display='none';return;}const c=CROPS[state.order.cropId];el.style.display='block';el.innerHTML=`<b>Заказ дня</b> ${c.emoji} ${c.name} ${state.order.progress}/${state.order.qty} · ${state.order.reward}🪙`;}
 function updateGrowth(){const now=Date.now();if(now>state.weatherUntil)rollWeather();const gMult=seasonGrowMult()*weatherGrowMult();state.plots.forEach(p=>{if(!p.cropId||p.ready||p.locked)return;const crop=CROPS[p.cropId];let need=growSec(crop)*1000*gMult;if(!p.watered)need*=1.55;if(state.weather==='rain'&&!p.watered)p.watered=true;if(crop.nightOnly&&!isNight())return;if(now-p.plantedAt>=need){p.ready=true;p.pop=1;}});state.animals.forEach(a=>{const t=ANIMAL_TYPES[a.type];if(!t)return;let iv=t.interval*1000;if(a.trait==='ленивая'||a.trait==='сонная')iv*=1.35;if(a.trait==='прожорливая')iv*=.85;if(!a.ready&&now-a.lastProduce>=iv)a.ready=true;});}
 
-/* ===== Canvas GFX v1.5 — roomy Farm Frenzy-like field ===== */
+/* ===== Canvas GFX v1.6 — bigger floating island (v1.4 look + v1.5 clean sprites) ===== */
 const GFX=(function(){
   const canvas=document.getElementById('game');
   const ctx=canvas.getContext('2d');
@@ -130,7 +130,7 @@ const GFX=(function(){
   let bob=0, camScale=1.0, assetsReady=false;
   const IMG={};
   const ASSET_LIST=[
-    'field','island','hut','barn','well','stall','scarecrow','heart','tree','bush','rocks','pest','coin','fence',
+    'island','hut','barn','well','stall','scarecrow','heart','tree','bush','rocks','pest','coin','fence',
     'chicken','chicken_walk','cow','sheep',
     'soil_dry','soil_tilled','soil_wet',
     'wheat_1','wheat_2','wheat_3','carrot_1','carrot_3','sun_1','sun_3'
@@ -152,7 +152,7 @@ const GFX=(function(){
     canvas.width=Math.floor(W*dpr); canvas.height=Math.floor(H*dpr);
     canvas.style.width=W+'px'; canvas.style.height=H+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    // slight scale only — field should fill most of the screen
+    // Island itself is ~95% wide — keep camScale near 1 so we don't crop edges
     camScale=1.0;
   }
   window.addEventListener('resize',resize);
@@ -211,152 +211,118 @@ const GFX=(function(){
     return arr[Math.max(0,Math.min(2,stage))];
   }
 
-  function drawFieldBg(){
-    const im=IMG.field;
-    if(im&&im.complete&&im.naturalWidth){
-      // cover full canvas, slight crop to fill
-      const iw=im.naturalWidth, ih=im.naturalHeight;
-      const scale=Math.max(W/iw, H/ih)*1.02;
-      const dw=iw*scale, dh=ih*scale;
-      ctx.drawImage(im, (W-dw)/2, (H-dh)/2 - H*0.02, dw, dh);
-      return true;
-    }
-    // fallback grass
-    const g=ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#7cb342'); g.addColorStop(1,'#558b2f');
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    return false;
-  }
-
-  function drawFenceRect(x0,y0,x1,y1,sc){
-    const posts=[];
-    const stepX=Math.max(28, Math.floor((x1-x0)/5));
-    const stepY=Math.max(26, Math.floor((y1-y0)/4));
-    for(let x=x0;x<=x1+1;x+=stepX){ posts.push([x,y0]); posts.push([x,y1]); }
-    for(let y=y0+stepY;y<y1;y+=stepY){ posts.push([x0,y]); posts.push([x1,y]); }
-    posts.forEach(([x,y])=>drawSprite('fence', x, y, {scale:sc||0.26, anchor:'feet', shadow:true, sa:.2}));
+  function islandMetrics(){
+    const im=IMG.island;
+    const nw=(im&&im.naturalWidth)||514;
+    const nh=(im&&im.naturalHeight)||509;
+    // nearly full canvas width (~100%); grass playable area fills most of stage
+    const targetW=W*1.02;
+    const sc=targetW/nw;
+    const iw=nw*sc, ih=nh*sc;
+    // lower so empty void under island shrinks; keep slight sky above
+    const ox=W/2;
+    const oy=H*0.55 + bob*16;
+    return {sc,iw,ih,ox,oy, rx:iw*0.40, ry:ih*0.26};
   }
 
   let _lw=0,_lh=0;
   function frame(now){
     const stageEl=canvas.parentElement.getBoundingClientRect();
     if(Math.floor(stageEl.width)!==_lw||Math.floor(stageEl.height)!==_lh){_lw=Math.floor(stageEl.width);_lh=Math.floor(stageEl.height);resize();}
-    bob=Math.sin(now/900)*.008;
+    bob=Math.sin(now/850)*.01;
     const phase=now/1000;
     hitMap=[]; animalHit=[]; pestHit=[];
     const night=isNight();
 
-    // sky strip above field (thin)
-    const sky=ctx.createLinearGradient(0,0,0,H*0.18);
-    if(night){sky.addColorStop(0,'#1a2744');sky.addColorStop(1,'#2c4a3a');}
-    else if(state.weather==='storm'){sky.addColorStop(0,'#5d6d7e');sky.addColorStop(1,'#6a7f5a');}
-    else if(season()==='autumn'){sky.addColorStop(0,'#7ec8f5');sky.addColorStop(1,'#c8e6a0');}
-    else if(season()==='winter'){sky.addColorStop(0,'#d6eaf8');sky.addColorStop(1,'#b0c9a8');}
-    else {sky.addColorStop(0,'#5dade2');sky.addColorStop(1,'#8fce6a');}
-    ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.22);
+    // sky void
+    const sky=ctx.createLinearGradient(0,0,0,H);
+    if(night){sky.addColorStop(0,'#1a2744');sky.addColorStop(1,'#2c3e5a');}
+    else if(state.weather==='storm'){sky.addColorStop(0,'#5d6d7e');sky.addColorStop(1,'#3e4c59');}
+    else if(season()==='autumn'){sky.addColorStop(0,'#7ec8f5');sky.addColorStop(1,'#ffd7a8');}
+    else if(season()==='winter'){sky.addColorStop(0,'#d6eaf8');sky.addColorStop(1,'#aeb6bf');}
+    else {sky.addColorStop(0,'#5dade2');sky.addColorStop(.55,'#85c1e9');sky.addColorStop(1,'#a9dfbf');}
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
     if(!night){
-      const sx=W*0.14,sy=H*0.06;
-      const sg=ctx.createRadialGradient(sx,sy,2,sx,sy,28);
-      sg.addColorStop(0,'#fff9c4'); sg.addColorStop(.5,'rgba(255,213,79,.45)'); sg.addColorStop(1,'rgba(255,213,79,0)');
-      ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sx,sy,28,0,Math.PI*2); ctx.fill();
+      const sx=W*0.14,sy=H*0.08;
+      const sg=ctx.createRadialGradient(sx,sy,2,sx,sy,34);
+      sg.addColorStop(0,'#fff9c4'); sg.addColorStop(.5,'rgba(255,213,79,.5)'); sg.addColorStop(1,'rgba(255,213,79,0)');
+      ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sx,sy,34,0,Math.PI*2); ctx.fill();
     }
 
-    // full playfield grass
-    drawFieldBg();
+    const {sc:islandSc,iw,ih,ox,oy,rx,ry}=islandMetrics();
 
-    // island edge peeks at borders (optional depth cue)
-    ctx.save();
-    ctx.globalAlpha=0.55;
-    drawSprite('island', W*0.08, H*0.92, {scale:Math.min(W,H)*0.00055, anchor:'center', shadow:false});
-    drawSprite('island', W*0.92, H*0.88, {scale:Math.min(W,H)*0.00048, anchor:'center', shadow:false, flip:true});
-    ctx.restore();
+    // cast shadow under floating island (cliff volume cue)
+    softShadow(ox+10, oy+ih*0.42, iw*0.38, Math.max(14,ih*0.055), .45);
+    softShadow(ox+4, oy+ih*0.38, iw*0.30, Math.max(10,ih*0.04), .25);
+
+    if(!drawSprite('island', ox, oy, {scale:islandSc, anchor:'center', shadow:false})){
+      ctx.fillStyle='#5d4037'; ctx.beginPath(); ctx.ellipse(ox,oy+ih*0.12,iw*0.4,ih*0.14,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#66bb6a'; ctx.beginPath(); ctx.ellipse(ox,oy-ih*0.02,iw*0.42,ih*0.16,0,0,Math.PI*2); ctx.fill();
+    }
 
     const sprites=[];
-
-    // Layout regions (portrait Farm Frenzy-like):
-    // buildings around edges, plots center-lower, pen mid-field when in pen zone
-    const plotArea={cx:W*0.52, cy:H*0.58}; // roomy center-lower
-    const penArea={cx:W*0.50, cy:H*0.48, w:W*0.72, h:H*0.34};
-
-    // edge decor — trees/bushes/rocks (no overlap with plots)
+    // Decor around rim — spread so they don't collide with plots/buildings
+    // dx/dy in units of island radius
     const decor=[
-      [0.08,0.28,'tree',0.38],[0.92,0.30,'tree',0.34],
-      [0.06,0.62,'bush',0.26],[0.94,0.66,'bush',0.24],
-      [0.12,0.78,'rocks',0.20],[0.88,0.80,'rocks',0.18],
-      [0.78,0.24,'bush',0.22],[0.22,0.34,'rocks',0.16]
+      [-0.78,-0.18,'tree',0.36],[0.80,-0.12,'tree',0.32],
+      [-0.62,0.22,'bush',0.24],[0.66,0.26,'bush',0.22],
+      [-0.88,0.05,'rocks',0.18],[0.90,0.08,'rocks',0.16],
+      [-0.35,-0.32,'fence',0.18],[0.30,-0.30,'fence',0.17],
+      [0.05,0.38,'rocks',0.14]
     ];
     decor.forEach(([dx,dy,name,sc])=>{
-      const x=dx*W, y=dy*H;
-      sprites.push({z:y+4, draw:()=>drawSprite(name,x,y,{scale:sc,anchor:'feet'})});
+      const x=ox+dx*rx, y=oy+dy*ry;
+      sprites.push({z:y+16, draw:()=>drawSprite(name,x,y,{scale:sc,anchor:'feet'})});
     });
 
-    // Heart landmark — top-center edge
-    sprites.push({z:H*0.22, draw:()=>{
-      const hx=W*0.50, hy=H*0.20+bob*10;
+    // Heart — back-center of island top
+    sprites.push({z:oy-ry*0.55, draw:()=>{
+      const hx=ox, hy=oy-ry*0.62;
       const pulse=1+Math.sin(phase*2.2)*0.04;
-      drawSprite('heart', hx, hy, {scale:0.28*pulse, anchor:'feet'});
+      drawSprite('heart', hx, hy, {scale:0.30*pulse, anchor:'feet'});
       const hp=Math.min(1,state.heart/(HEART_THRESHOLDS[HEART_THRESHOLDS.length-1]||600));
-      ctx.fillStyle='rgba(60,30,10,.55)'; roundRect(hx-50,hy-92,100,9,4); ctx.fill();
-      const hg=ctx.createLinearGradient(hx-50,0,hx+50,0); hg.addColorStop(0,'#e91e8c'); hg.addColorStop(1,'#ff80ab');
-      ctx.fillStyle=hg; roundRect(hx-50,hy-92,100*hp,9,4); ctx.fill();
+      ctx.fillStyle='rgba(60,30,10,.55)'; roundRect(hx-52,hy-88,104,9,4); ctx.fill();
+      const hg=ctx.createLinearGradient(hx-52,0,hx+52,0); hg.addColorStop(0,'#e91e8c'); hg.addColorStop(1,'#ff80ab');
+      ctx.fillStyle=hg; roundRect(hx-52,hy-88,104*hp,9,4); ctx.fill();
       ctx.fillStyle='#fff8e1'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
-      ctx.strokeStyle='rgba(80,40,10,.45)'; ctx.lineWidth=3;
-      ctx.strokeText('Сердце острова', hx, hy-78); ctx.fillText('Сердце острова', hx, hy-78);
+      ctx.strokeStyle='rgba(80,40,10,.5)'; ctx.lineWidth=3;
+      ctx.strokeText('Сердце острова', hx, hy-74); ctx.fillText('Сердце острова', hx, hy-74);
     }});
 
-    // Buildings by zone — edge placement, clearly separated
+    // Buildings on edges — clearly separated
     if(state.zone==='ruins'){
-      sprites.push({z:H*0.36, draw:()=>drawSprite('barn', W*0.18, H*0.36, {scale:0.42, anchor:'feet'})});
-      sprites.push({z:H*0.32, draw:()=>drawSprite('well', W*0.82, H*0.32, {scale:0.30, anchor:'feet'})});
-      sprites.push({z:H*0.40, draw:()=>drawSprite('rocks', W*0.50, H*0.38, {scale:0.28, anchor:'feet'})});
+      sprites.push({z:oy+ry*0.05, draw:()=>drawSprite('barn', ox-rx*0.55, oy+ry*0.02, {scale:0.40, anchor:'feet'})});
+      sprites.push({z:oy-ry*0.05, draw:()=>drawSprite('well', ox+rx*0.58, oy-ry*0.08, {scale:0.28, anchor:'feet'})});
     } else if(state.zone==='pen'){
-      sprites.push({z:H*0.34, draw:()=>drawSprite('stall', W*0.86, H*0.34, {scale:0.36, anchor:'feet'})});
-      sprites.push({z:H*0.30, draw:()=>drawSprite('well', W*0.14, H*0.30, {scale:0.28, anchor:'feet'})});
-      // fenced pen area
-      sprites.push({z:penArea.cy-penArea.h*0.42, draw:()=>{
-        const x0=penArea.cx-penArea.w*0.42, x1=penArea.cx+penArea.w*0.42;
-        const y0=penArea.cy-penArea.h*0.38, y1=penArea.cy+penArea.h*0.42;
-        // soft dirt pad
-        ctx.save();
-        ctx.fillStyle='rgba(140,100,55,.28)';
-        ctx.beginPath(); ctx.ellipse(penArea.cx, penArea.cy, penArea.w*0.40, penArea.h*0.36, 0,0,Math.PI*2); ctx.fill();
-        ctx.restore();
-        drawFenceRect(x0,y0,x1,y1,0.20);
-      }});
+      sprites.push({z:oy+ry*0.02, draw:()=>drawSprite('stall', ox+rx*0.62, oy, {scale:0.34, anchor:'feet'})});
+      sprites.push({z:oy-ry*0.08, draw:()=>drawSprite('well', ox-rx*0.62, oy-ry*0.10, {scale:0.28, anchor:'feet'})});
     } else if(state.zone==='moon'){
-      sprites.push({z:H*0.32, draw:()=>drawSprite('well', W*0.16, H*0.32, {scale:0.30, anchor:'feet'})});
-      sprites.push({z:H*0.34, draw:()=>drawSprite('hut', W*0.84, H*0.34, {scale:0.36, anchor:'feet', alpha:0.9})});
+      sprites.push({z:oy-ry*0.05, draw:()=>drawSprite('well', ox-rx*0.55, oy-ry*0.08, {scale:0.28, anchor:'feet'})});
+      sprites.push({z:oy+ry*0.02, draw:()=>drawSprite('hut', ox+rx*0.55, oy, {scale:0.34, anchor:'feet', alpha:0.92})});
     } else {
-      // main farm — hut left edge, well right-top, stall lower-left edge when unlocked
-      sprites.push({z:H*0.34, draw:()=>drawSprite('hut', W*0.16, H*0.34, {scale:0.40, anchor:'feet'})});
-      sprites.push({z:H*0.28, draw:()=>drawSprite('well', W*0.84, H*0.28, {scale:0.28, anchor:'feet'})});
-      if(state.level>=3) sprites.push({z:H*0.72, draw:()=>drawSprite('stall', W*0.14, H*0.72, {scale:0.30, anchor:'feet'})});
+      sprites.push({z:oy+ry*0.02, draw:()=>drawSprite('hut', ox-rx*0.62, oy, {scale:0.38, anchor:'feet'})});
+      sprites.push({z:oy-ry*0.02, draw:()=>drawSprite('well', ox+rx*0.64, oy-ry*0.06, {scale:0.28, anchor:'feet'})});
+      if(state.level>=3) sprites.push({z:oy+ry*0.42, draw:()=>drawSprite('stall', ox-rx*0.70, oy+ry*0.48, {scale:0.24, anchor:'feet'})});
     }
-    if(state.scarecrows>0) sprites.push({z:H*0.50, draw:()=>drawSprite('scarecrow', W*0.78, H*0.50, {scale:0.32, anchor:'feet'})});
+    if(state.scarecrows>0 && state.zone!=='pen'){
+      sprites.push({z:oy+ry*0.28, draw:()=>drawSprite('scarecrow', ox+rx*0.72, oy+ry*0.18, {scale:0.28, anchor:'feet'})});
+    }
 
-    // Plots — spacious isometric grid, readable tap targets
+    // Plot grid — front-center of island top (visible, readable taps)
     const zonePlots=[]; state.plots.forEach((p,i)=>{if(p.zone===state.zone)zonePlots.push({p,i});});
     const need=state.zone==='main'?plotsUnlocked():(zoneUnlocked(ZONES.find(z=>z.id===state.zone))?Math.min(8,4+Math.floor(state.level/5)*2):0);
     zonePlots.forEach(({p},k)=>{p.locked=k>=need;});
     const show=Math.max(need,4);
     const {cols,rows}=gridSize(Math.min(show, zonePlots.length||4));
-    // larger cells + gap so plots don't overlap buildings
-    const tw=Math.min(92, Math.floor(W/(cols+1.15)));
-    const th=tw*0.58;
-    const gridOx=plotArea.cx;
-    const gridOy=plotArea.cy - (rows*th)*0.28;
+    // cell size scales with island; leave margin so plots stay on grass
+    const tw=Math.min(76, Math.floor((rx*1.35)/(cols+0.5)));
+    const th=tw*0.56;
+    const gridOx=ox;
+    const gridOy=oy + ry*0.02;
     const gMult=seasonGrowMult()*weatherGrowMult();
     const nowMs=Date.now();
 
     if(state.zone!=='pen'){
-      // soil bed under plot grid
-      sprites.push({z:gridOy-8, draw:()=>{
-        const padW=cols*tw*0.55+40, padH=rows*th*0.55+30;
-        ctx.save();
-        ctx.fillStyle='rgba(110,75,40,.22)';
-        ctx.beginPath(); ctx.ellipse(gridOx, gridOy+rows*th*0.35, padW, padH, 0,0,Math.PI*2); ctx.fill();
-        ctx.restore();
-      }});
       for(let r=0;r<rows;r++){
         for(let c=0;c<cols;c++){
           const k=r*cols+c; if(k>=zonePlots.length) continue;
@@ -367,26 +333,29 @@ const GFX=(function(){
       }
     }
 
-    // Animals in pen — spaced, no overlap
+    // Animals — spaced across island front when in pen
     if(state.zone==='pen'){
+      const n=Math.max(1, state.animals.length);
       state.animals.forEach((a,idx)=>{
-        const colsA=3;
-        const ax=penArea.cx - penArea.w*0.28 + (idx%colsA)*(penArea.w*0.28) + Math.sin(phase*0.7+idx)*8;
-        const ay=penArea.cy - penArea.h*0.12 + Math.floor(idx/colsA)*(penArea.h*0.28) + Math.cos(phase*0.5+idx)*5;
+        const colsA=Math.min(3, n);
+        const col=idx%colsA;
+        const row=Math.floor(idx/colsA);
+        const ax=ox - rx*0.55 + col*(rx*0.55) + Math.sin(phase*0.7+idx)*5;
+        const ay=oy + ry*0.08 + row*(ry*0.42) + Math.cos(phase*0.5+idx)*3;
         const walk=Math.sin(phase*3+idx)>0;
         let spr=a.type==='chicken'?(walk?'chicken_walk':'chicken'):(a.type==='cow'?'cow':'sheep');
         sprites.push({z:ay+8, draw:()=>{
-          drawSprite(spr, ax, ay, {scale:0.38, anchor:'feet', flip:Math.sin(phase*0.7+idx)<0, squash:Math.sin(phase*4+idx)*0.03});
-          animalHit.push({idx,x:ax,y:ay-22,r:36});
-          if(a.ready){ctx.fillStyle='#ffd54f';ctx.font='bold 14px sans-serif';ctx.fillText('●',ax+18,ay-52);}
+          drawSprite(spr, ax, ay, {scale:0.36, anchor:'feet', flip:Math.sin(phase*0.7+idx)<0, squash:Math.sin(phase*4+idx)*0.03});
+          animalHit.push({idx,x:ax,y:ay-22,r:40});
+          if(a.ready){ctx.fillStyle='#ffd54f';ctx.font='bold 14px sans-serif';ctx.fillText('●',ax+18,ay-50);}
         }});
       });
       if(!state.animals.length){
-        sprites.push({z:penArea.cy, draw:()=>{
+        sprites.push({z:oy+ry*0.2, draw:()=>{
           ctx.fillStyle='#5d4037'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
           ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=3;
-          ctx.strokeText('Купи животных на рынке', penArea.cx, penArea.cy);
-          ctx.fillText('Купи животных на рынке', penArea.cx, penArea.cy);
+          ctx.strokeText('Купи животных на рынке', ox, oy+ry*0.2);
+          ctx.fillText('Купи животных на рынке', ox, oy+ry*0.2);
         }});
       }
     }
@@ -395,11 +364,10 @@ const GFX=(function(){
     sprites.forEach(s=>{
       if(s.draw){s.draw(); return;}
       const {p,i,pos,tw,th}=s;
-      let soil='soil_dry';
+      let soil='soil_tilled';
       if(p.locked) soil='soil_dry';
       else if(p.watered) soil='soil_wet';
       else if(p.cropId) soil='soil_tilled';
-      else soil='soil_tilled';
       if(p.locked){
         softShadow(pos.x+3,pos.y+th*0.35,tw*0.4,th*0.22,.22);
         ctx.globalAlpha=0.5; drawSprite('soil_dry', pos.x, pos.y+8, {scale:tw/175, anchor:'center', shadow:false}); ctx.globalAlpha=1;
@@ -434,12 +402,12 @@ const GFX=(function(){
     });
 
     state.pests.forEach(pe=>{
-      const px=W*0.25+(pe.x/100)*W*0.55, py=H*0.40+(pe.y/100)*H*0.35;
+      const px=ox+(pe.x-50)/100*rx*1.6, py=oy+(pe.y-40)/100*ry*1.4;
       drawSprite('pest', px, py+Math.sin(phase*5+pe.x)*3, {scale:0.20, anchor:'feet', rot:Math.sin(phase*3)*0.1});
       pestHit.push({pe,x:px,y:py-10});
     });
 
-    // weather overlay
+    // weather
     if(state.weather==='rain'||state.weather==='storm'){
       ctx.strokeStyle=state.weather==='storm'?'rgba(200,220,255,.55)':'rgba(160,200,255,.4)';
       ctx.lineWidth=1.5;
@@ -465,9 +433,8 @@ const GFX=(function(){
       if(c.t>=1) coinsFly.splice(i,1);
     }
 
-    // warm vignette (lighter — roomier feel)
-    const vig=ctx.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,H*0.92);
-    vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(40,25,10,.18)');
+    const vig=ctx.createRadialGradient(W/2,H/2,H*0.32,W/2,H/2,H*0.9);
+    vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(40,25,10,.20)');
     ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
 
     requestAnimationFrame(frame);
@@ -480,12 +447,12 @@ const GFX=(function(){
     const cr=canvas.getBoundingClientRect();
     coinsFly.push({x0:x,y0:y,x1:br.left-cr.left+10,y1:br.top-cr.top+10,t:0});
   }
-  function burstHeart(){spawnParticles(W/2,H*0.18,'#ff80ab',16);}
+  function burstHeart(){spawnParticles(W/2,H*0.32,'#ff80ab',16);}
   function pick(clientX,clientY){
     const rect=canvas.getBoundingClientRect();
     let x=(clientX-rect.left)*(W/rect.width), y=(clientY-rect.top)*(H/rect.height);
     for(let i=pestHit.length-1;i>=0;i--){const h=pestHit[i]; if(Math.hypot(h.x-x,h.y-y)<28) return{type:'pest',pe:h.pe};}
-    for(const h of animalHit){ if(Math.hypot(h.x-x,h.y-y)<(h.r||38)) return{type:'animal',idx:h.idx};}
+    for(const h of animalHit){ if(Math.hypot(h.x-x,h.y-y)<(h.r||40)) return{type:'animal',idx:h.idx};}
     for(let i=hitMap.length-1;i>=0;i--){const h=hitMap[i]; const dx=Math.abs(x-h.x), dy=Math.abs(y-h.y); if(dx/h.tw+dy/h.th<.7) return{type:'plot',i:h.i,x:h.x,y:h.y};}
     return null;
   }
@@ -498,9 +465,9 @@ const GFX=(function(){
   function start(){resize();requestAnimationFrame(frame);}
   function drawIntro(){
     const c=document.getElementById('intro-art'); if(!c)return; const g=c.getContext('2d');
-    const im=IMG.field||IMG.island;
+    const im=IMG.island;
     const draw=()=>{g.clearRect(0,0,160,120);
-      if(im&&im.complete&&im.naturalWidth){const s=Math.min(160/im.naturalWidth,120/im.naturalHeight); const w=im.naturalWidth*s,h=im.naturalHeight*s; g.drawImage(im,(160-w)/2,(120-h)/2,w,h);}
+      if(im&&im.complete&&im.naturalWidth){const s=Math.min(150/im.naturalWidth,110/im.naturalHeight); const w=im.naturalWidth*s,h=im.naturalHeight*s; g.drawImage(im,(160-w)/2,(120-h)/2,w,h);}
       else {g.fillStyle='#5dade2';g.fillRect(0,0,160,90);g.fillStyle='#66bb6a';g.beginPath();g.ellipse(80,70,60,28,0,0,Math.PI*2);g.fill();}};
     if(im&&im.complete) draw(); else if(im) im.onload=draw;
   }
@@ -576,7 +543,7 @@ const hasSave=load();
 if(hasSave){document.getElementById('btn-continue').style.display='block';document.getElementById('btn-continue').onclick=startGame;document.getElementById('btn-start').textContent='Новая игра';document.getElementById('btn-start').onclick=()=>{localStorage.removeItem(SAVE_KEY);location.reload();};}
 else document.getElementById('btn-start').onclick=startGame;
 
-const APP_VERSION={version: '1.5.0',versionCode: 10500,webVersion: '1.5.0'};
+const APP_VERSION={version: '1.6.0',versionCode: 10600,webVersion: '1.6.0'};
 const DEFAULT_MANIFEST_URL=localStorage.getItem('farm_manifest_url')||'https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/version.json';
 function cmpSemver(a,b){const pa=String(a||'0').split('.').map(n=>parseInt(n,10)||0);const pb=String(b||'0').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){const d=(pa[i]||0)-(pb[i]||0);if(d)return d;}return 0;}
 function getAppUpdatePlugin(){try{const C=window.Capacitor;if(!C)return null;if(C.Plugins&&C.Plugins.AppUpdate)return C.Plugins.AppUpdate;if(typeof C.registerPlugin==='function')return C.registerPlugin('AppUpdate');}catch(e){}return null;}
