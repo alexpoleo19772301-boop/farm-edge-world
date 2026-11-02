@@ -1,9 +1,9 @@
 {
-  "version": "1.1.0",
-  "versionCode": 2,
+  "version": "1.2.0",
+  "versionCode": 10200,
   "apkUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/farm-edge-world-debug.apk",
-  "webVersion": "1.1.0",
+  "webVersion": "1.2.0",
   "webBundleUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/www.zip",
   "force": false,
-  "changelog": "• Автообновления: манифест и www.zip в GitHub Release\n• APK через releases/latest\n• CORS не нужен в приложении (нативный fetch)"
+  "changelog": "• Объёмная 2D-графика на canvas: остров в 2.5D, тени, градиенты\n• Анимации: колыхание культур, рост, сбор с частицами, монеты к счётчику\n• Животные ходят/стоят, остров покачивается, облака с параллаксом\n• День/ночь с тоном, дождь и шторм частицами\n• Спрайты грядок, культур, зданий, пугал, вредителей и Сердца острова"
 }

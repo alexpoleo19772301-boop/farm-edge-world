@@ -30,7 +30,7 @@ doc={"version":ver,"versionCode":code,"apkUrl":apk,"webVersion":ver,"webBundleUr
 text=json.dumps(doc,ensure_ascii=False,indent=2)+"\n"
 for p in ["version.json","www/version.json","docs/version.json","dist/version.json"]:
   pathlib.Path(p).write_text(text)
-for rel in ["index.html","www/index.html"]:
+for rel in ["index.html","www/index.html","game.js","www/game.js"]:
   path=pathlib.Path(rel)
   if not path.exists(): continue
   t=path.read_text()
@@ -38,6 +38,8 @@ for rel in ["index.html","www/index.html"]:
   t=re.sub(r"versionCode:\s*\d+","versionCode: %d"%code,t,count=1)
   t=re.sub(r"webVersion:\s*'[^']*'","webVersion: '%s'"%ver,t,count=1)
   t=re.sub(r">v[0-9.]+<",">v%s<"%ver,t,count=1)
+  t=re.sub(r"DEFAULT_MANIFEST_URL=localStorage\.getItem\('farm_manifest_url'\)\|\|'[^']*'",
+           "DEFAULT_MANIFEST_URL=localStorage.getItem('farm_manifest_url')||'%s'"%manifest, t)
   t=re.sub(r"DEFAULT_MANIFEST_URL = localStorage\.getItem\('farm_manifest_url'\) \|\| '[^']*'",
            "DEFAULT_MANIFEST_URL = localStorage.getItem('farm_manifest_url') || '%s'"%manifest, t)
   path.write_text(t)
