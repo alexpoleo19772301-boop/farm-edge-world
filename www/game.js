@@ -75,14 +75,196 @@ function sellPrice(id,mults){const c=CROPS[id];return Math.max(1,Math.round(c.ba
 function xpForLevel(lv){return LEVEL_XP[Math.min(lv,LEVEL_XP.length-1)]||99999;}
 
 const AudioFX=(function(){
-  let ctx=null, muted=false, master=null;
-  function ensure(){if(muted)return null;if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=0.22;master.connect(ctx.destination);}if(ctx.state==='suspended')ctx.resume();return ctx;}
-  function beep(freq,dur,type,vol){const c=ensure();if(!c)return;const o=c.createOscillator(),g=c.createGain();o.type=type||'sine';o.frequency.value=freq;g.gain.value=vol||0.2;g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+dur);o.connect(g);g.connect(master);o.start();o.stop(c.currentTime+dur);}
-  return{setMuted(m){muted=m;if(master)master.gain.value=m?0:0.22;},isMuted(){return muted;},
-    plant(){beep(320,.08,'triangle',.15);beep(420,.1,'sine',.1);},water(){beep(600,.05,'sine',.08);beep(500,.12,'sine',.1);},
-    harvest(){beep(520,.07,'square',.1);beep(780,.12,'sine',.12);},coin(){beep(880,.06,'sine',.1);beep(1175,.1,'sine',.1);},
-    feed(){beep(200,.15,'triangle',.15);beep(300,.2,'sine',.12);},level(){beep(440,.1,'sine',.12);beep(554,.1,'sine',.12);beep(659,.2,'sine',.14);},
-    hit(){beep(180,.08,'sawtooth',.12);},ui(){beep(700,.04,'sine',.06);},weather(){beep(120,.3,'triangle',.08);},unlock(){beep(523,.1,'sine',.1);beep(784,.2,'sine',.12);}};
+  const BASE='assets/audio/';
+  const FILES={
+    music_day:'music_day.ogg', music_night:'music_night.ogg',
+    amb_birds:'amb_birds.ogg', amb_crickets:'amb_crickets.ogg', amb_rain:'amb_rain.ogg', amb_storm:'amb_storm.ogg',
+    tap:'sfx_tap.ogg', plant:'sfx_plant.ogg', water:'sfx_water.ogg', harvest:'sfx_harvest.ogg',
+    coin:'sfx_coin.ogg', purchase:'sfx_purchase.ogg', levelup:'sfx_levelup.ogg', unlock:'sfx_unlock.ogg',
+    notify:'sfx_notify.ogg', squish:'sfx_squish.ogg', moo:'sfx_moo.ogg', cluck:'sfx_cluck.ogg', baa:'sfx_baa.ogg'
+  };
+  let ctx=null, unlocked=false, muted=false, musicVol=0.45, sfxVol=0.7;
+  let master=null, musicGain=null, sfxGain=null, ambGain=null;
+  const buffers={};
+  let musicSrc=null, ambSrc=null, curMusic=null, curAmb=null;
+  let loading=null, lastAnimalSound=0;
+
+  function ensureCtx(){
+    if(!ctx){
+      ctx=new (window.AudioContext||window.webkitAudioContext)();
+      master=ctx.createGain(); master.gain.value=muted?0:1; master.connect(ctx.destination);
+      musicGain=ctx.createGain(); musicGain.gain.value=musicVol; musicGain.connect(master);
+      sfxGain=ctx.createGain(); sfxGain.gain.value=sfxVol; sfxGain.connect(master);
+      ambGain=ctx.createGain(); ambGain.gain.value=Math.min(0.55, sfxVol*0.55); ambGain.connect(master);
+    }
+    return ctx;
+  }
+
+  async function loadAll(){
+    ensureCtx();
+    const entries=Object.entries(FILES);
+    await Promise.all(entries.map(async ([key,file])=>{
+      if(buffers[key]) return;
+      try{
+        const res=await fetch(BASE+file);
+        const arr=await res.arrayBuffer();
+        buffers[key]=await ctx.decodeAudioData(arr.slice(0));
+      }catch(e){ console.warn('audio load fail', key, e); }
+    }));
+  }
+
+  function unlock(){
+    if(unlocked) return Promise.resolve();
+    unlocked=true;
+    ensureCtx();
+    const p=ctx.resume();
+    if(!loading) loading=loadAll().then(()=>{ updateWorldAudio(true); });
+    return Promise.all([p, loading]);
+  }
+
+  function playBuf(name, dest, opts){
+    opts=opts||{};
+    if(muted||!unlocked) return;
+    ensureCtx();
+    const buf=buffers[name];
+    if(!buf){ // fallback tiny beep if not loaded yet
+      if(dest===sfxGain) _beep(660,0.05,0.08);
+      return;
+    }
+    if(ctx.state==='suspended') ctx.resume();
+    const src=ctx.createBufferSource();
+    src.buffer=buf;
+    src.loop=!!opts.loop;
+    const g=ctx.createGain();
+    g.gain.value=opts.vol!=null?opts.vol:1;
+    src.connect(g); g.connect(dest||sfxGain);
+    try{ src.start(0, opts.offset||0); }catch(e){}
+    return src;
+  }
+
+  function _beep(freq,dur,vol){
+    try{
+      ensureCtx(); if(muted) return;
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.frequency.value=freq; g.gain.value=vol||0.1;
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur);
+      o.connect(g); g.connect(sfxGain||master); o.start(); o.stop(ctx.currentTime+dur);
+    }catch(e){}
+  }
+
+  function stopSrc(ref){
+    if(!ref) return;
+    try{ ref.stop(); }catch(e){}
+    try{ ref.disconnect(); }catch(e){}
+  }
+
+  function playMusic(name){
+    if(curMusic===name && musicSrc) return;
+    stopSrc(musicSrc); musicSrc=null; curMusic=name;
+    if(!name||muted) return;
+    musicSrc=playBuf(name, musicGain, {loop:true, vol:1});
+  }
+
+  function playAmb(name){
+    if(curAmb===name && ambSrc) return;
+    stopSrc(ambSrc); ambSrc=null; curAmb=name;
+    if(!name||muted) return;
+    ambSrc=playBuf(name, ambGain, {loop:true, vol:1});
+  }
+
+  function updateWorldAudio(force){
+    if(!unlocked||!buffers.music_day) return;
+    const night=typeof isNight==='function' && isNight();
+    const wx=(typeof state!=='undefined' && state.weather)||'clear';
+    playMusic(night?'music_night':'music_day');
+    if(wx==='storm') playAmb('amb_storm');
+    else if(wx==='rain') playAmb('amb_rain');
+    else playAmb(night?'amb_crickets':'amb_birds');
+  }
+
+  function applyMute(){
+    if(!master) return;
+    master.gain.value=muted?0:1;
+    if(muted){ stopSrc(musicSrc); musicSrc=null; curMusic=null; stopSrc(ambSrc); ambSrc=null; curAmb=null; }
+    else if(unlocked) updateWorldAudio(true);
+  }
+
+  function setMuted(m){ muted=!!m; applyMute(); }
+  function isMuted(){ return muted; }
+  function setMusicVol(v){ musicVol=Math.max(0,Math.min(1,+v||0)); if(musicGain) musicGain.gain.value=musicVol; }
+  function setSfxVol(v){
+    sfxVol=Math.max(0,Math.min(1,+v||0));
+    if(sfxGain) sfxGain.gain.value=sfxVol;
+    if(ambGain) ambGain.gain.value=Math.min(0.55, sfxVol*0.55);
+  }
+  function getMusicVol(){ return musicVol; }
+  function getSfxVol(){ return sfxVol; }
+
+  function pauseAll(){
+    if(ctx && ctx.state==='running') ctx.suspend().catch(()=>{});
+  }
+  function resumeAll(){
+    if(!unlocked||muted) return;
+    if(ctx) ctx.resume().then(()=>updateWorldAudio(true)).catch(()=>{});
+  }
+
+  function sfx(name){ playBuf(name, sfxGain); }
+  function plant(){ sfx('plant'); }
+  function water(){ sfx('water'); }
+  function harvest(){ sfx('harvest'); }
+  function coin(){ sfx('coin'); }
+  function purchase(){ sfx('purchase'); }
+  function feed(){ sfx('notify'); }
+  function level(){ sfx('levelup'); }
+  function hit(){ sfx('squish'); }
+  function ui(){ sfx('tap'); }
+  function weather(){ sfx('notify'); setTimeout(()=>updateWorldAudio(true), 50); }
+  function unlockChime(){ sfx('unlock'); }
+  function notify(){ sfx('notify'); }
+  function animal(type){
+    if(type==='cow') sfx('moo');
+    else if(type==='sheep') sfx('baa');
+    else sfx('cluck');
+  }
+  function maybeAnimalIdle(animals){
+    if(muted||!unlocked||!animals||!animals.length) return;
+    const now=Date.now();
+    if(now-lastAnimalSound<4500) return;
+    if(Math.random()>0.18) return;
+    lastAnimalSound=now;
+    const a=animals[Math.floor(Math.random()*animals.length)];
+    animal(a.type);
+  }
+
+  // unlock on first user gesture
+  function armUnlock(){
+    const once=()=>{ unlock(); window.removeEventListener('pointerdown', once, true); window.removeEventListener('touchstart', once, true); window.removeEventListener('keydown', once, true); };
+    window.addEventListener('pointerdown', once, true);
+    window.addEventListener('touchstart', once, true);
+    window.addEventListener('keydown', once, true);
+  }
+  armUnlock();
+
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) pauseAll(); else resumeAll();
+  });
+  window.addEventListener('pagehide', pauseAll);
+  window.addEventListener('pageshow', resumeAll);
+
+  // Capacitor App plugin if present
+  try{
+    const Cap=window.Capacitor;
+    if(Cap&&Cap.Plugins&&Cap.Plugins.App){
+      Cap.Plugins.App.addListener('appStateChange', ({isActive})=>{ if(isActive) resumeAll(); else pauseAll(); });
+    }
+  }catch(e){}
+
+  return{
+    unlockAudio: unlock, setMuted, isMuted, setMusicVol, setSfxVol, getMusicVol, getSfxVol,
+    updateWorldAudio, pauseAll, resumeAll, maybeAnimalIdle, animal, notify, purchase,
+    plant, water, harvest, coin, feed, level, hit, ui, weather,
+    unlock: unlockChime
+  };
 })();
 
 const state={
@@ -90,7 +272,7 @@ const state={
   seasonIdx:0,weather:'clear',weatherUntil:0,cycleStart:Date.now(),dayIndex:0,
   plots:[],inventory:{wheat:4,carrot:3},products:{},unlockedHybrids:[],animals:[],
   storyIdx:0,storiesRead:[0],selectedTool:'hand',selectedPlot:-1,zone:'main',
-  pests:[],nightActive:false,order:null,ordersDone:0,scarecrows:0,muted:false,lastSave:0,
+  pests:[],nightActive:false,order:null,ordersDone:0,scarecrows:0,muted:false,musicVol:0.45,sfxVol:0.7,lastSave:0,
 };
 
 function plotsUnlocked(){let n=4;for(let i=1;i<HEART_THRESHOLDS.length;i++)if(state.heart>=HEART_THRESHOLDS[i])n=Math.min(24,4+i*2);n=Math.max(n,Math.min(24,4+Math.floor((state.level-1)/2)*2));return n;}
@@ -502,8 +684,8 @@ function onPlotTap(i,sx,sy){
 }
 function plant(i,id,sx,sy){const p=state.plots[i];if(p.locked||p.cropId){toast('Грядка занята');return;}const crop=CROPS[id];if(crop.zone&&crop.zone!==state.zone){toast('Другая зона');return;}if(crop.nightOnly&&!isNight()){toast('Только ночью');return;}let have=state.inventory[id]||0;if(have>0)state.inventory[id]=have-1;else if(!crop.hybrid){if(state.coins<crop.cost){toast('Мало монет');return;}state.coins-=crop.cost;}else{toast('Нет семян гибрида');return;}p.cropId=id;p.plantedAt=Date.now();p.watered=false;p.ready=false;p.pop=1;AudioFX.plant();toast('Посадили '+crop.emoji);GFX.spawnParticles(sx||200,sy||200,'#81c784',10);updateHUD();renderToolbar();}
 function harvest(i,sx,sy){const p=state.plots[i];const crop=CROPS[p.cropId];let price=Math.round(sellPrice(p.cropId,state.mults)*seasonSellBonus(p.cropId));if(state.weather==='storm'&&Math.random()<.15){toast('💨 Шторм (−30%)');price=Math.round(price*.7);}state.coins+=price;addXp(crop.xp);if(Math.random()<.4)state.inventory[p.cropId]=(state.inventory[p.cropId]||0)+1;if(state.order&&state.order.cropId===p.cropId&&state.order.progress<state.order.qty){state.order.progress++;if(state.order.progress>=state.order.qty){state.coins+=state.order.reward;addXp(state.order.xp);state.ordersDone++;AudioFX.coin();toast('📦 Заказ +'+state.order.reward+'🪙');state.order=null;maybeStory();genOrder();}else renderOrder();}AudioFX.harvest();AudioFX.coin();toast(crop.emoji+' +'+price+'🪙');GFX.spawnParticles(sx,sy,crop.color,12);GFX.flyCoin(sx,sy);p.cropId=null;p.plantedAt=0;p.watered=false;p.ready=false;updateHUD();}
-function collectAnimal(idx){const a=state.animals[idx];if(!a||!a.ready){toast('Ещё не готово');return;}const t=ANIMAL_TYPES[a.type];let price=t.produceSell;if(a.trait==='храбрая')price=Math.round(price*1.1);state.coins+=price;addXp(5);state.products[t.produce]=(state.products[t.produce]||0)+1;a.ready=false;a.lastProduce=Date.now();if(a.trait==='храбрая'&&state.pests.length){removePest(state.pests[0]);toast('🐔 Курица прогнала вредителя!');}AudioFX.coin();toast(t.produceEmoji+' +'+price+'🪙');updateHUD();save();}
-function buyAnimal(typeId){const t=ANIMAL_TYPES[typeId];if(state.level<t.unlock){toast('Нужен ур.'+t.unlock);return;}if(!zoneUnlocked(ZONES.find(z=>z.id==='pen'))){toast('Сначала открой Загон');return;}if(state.animals.length>=6){toast('Макс. 6');return;}if(state.coins<t.cost){toast('Мало монет');return;}state.coins-=t.cost;const trait=t.traits[Math.floor(Math.random()*t.traits.length)];state.animals.push({type:typeId,trait,lastProduce:Date.now(),ready:false});AudioFX.unlock();toast(t.emoji+' «'+trait+'»');updateHUD();renderToolbar();save();}
+function collectAnimal(idx){const a=state.animals[idx];if(!a)return;AudioFX.animal(a.type);if(!a.ready){toast('Ещё не готово');return;}const t=ANIMAL_TYPES[a.type];let price=t.produceSell;if(a.trait==='храбрая')price=Math.round(price*1.1);state.coins+=price;addXp(5);state.products[t.produce]=(state.products[t.produce]||0)+1;a.ready=false;a.lastProduce=Date.now();if(a.trait==='храбрая'&&state.pests.length){removePest(state.pests[0]);toast('🐔 Курица прогнала вредителя!');}AudioFX.coin();toast(t.produceEmoji+' +'+price+'🪙');updateHUD();save();}
+function buyAnimal(typeId){const t=ANIMAL_TYPES[typeId];if(state.level<t.unlock){toast('Нужен ур.'+t.unlock);return;}if(!zoneUnlocked(ZONES.find(z=>z.id==='pen'))){toast('Сначала открой Загон');return;}if(state.animals.length>=6){toast('Макс. 6');return;}if(state.coins<t.cost){toast('Мало монет');return;}state.coins-=t.cost;const trait=t.traits[Math.floor(Math.random()*t.traits.length)];state.animals.push({type:typeId,trait,lastProduce:Date.now(),ready:false});AudioFX.unlock();AudioFX.animal(typeId);AudioFX.purchase();toast(t.emoji+' «'+trait+'»');updateHUD();renderToolbar();save();}
 function craft(resultId){const h=HYBRIDS.find(x=>x.result===resultId);if(!h)return;if((state.inventory[h.a]||0)<1||(state.inventory[h.b]||0)<1){toast('Нужны семена родителей');return;}state.inventory[h.a]--;state.inventory[h.b]--;state.inventory[resultId]=(state.inventory[resultId]||0)+1;if(!state.unlockedHybrids.includes(resultId)){state.unlockedHybrids.push(resultId);addXp(15);AudioFX.unlock();toast('🧬 '+CROPS[resultId].name);}else{AudioFX.plant();toast('🧬 '+CROPS[resultId].emoji);}renderToolbar();save();}
 
 function openModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('modal-bg').classList.add('open');AudioFX.ui();}
@@ -514,36 +696,55 @@ function openMarket(){
   openModal(html);const tabBox=document.getElementById('mtab');
   function show(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===tab));
     if(tab==='prices'){let rows='';Object.keys(CROPS).forEach(id=>{const c=CROPS[id];const price=Math.round(sellPrice(id,state.mults)*seasonSellBonus(id));const delta=((state.mults[id]-1)*100);rows+=`<div class="row"><span style="font-size:22px">${c.emoji}</span><div class="name">${c.name}<div class="delta ${delta>=0?'up':'down'}">${delta>=0?'+':''}${delta.toFixed(0)}%</div></div><div class="price">${price}🪙</div></div>`;});tabBox.innerHTML=rows;}
-    else if(tab==='buy'){let rows='';Object.values(CROPS).filter(c=>!c.hybrid&&state.level>=c.unlock).forEach(c=>{rows+=`<div class="row"><span style="font-size:22px">${c.emoji}</span><div class="name">${c.name}</div><button class="btn" data-buy="${c.id}">${c.cost}🪙</button></div>`;});tabBox.innerHTML=rows;tabBox.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const c=CROPS[b.dataset.buy];if(state.coins<c.cost){toast('Мало монет');return;}state.coins-=c.cost;state.inventory[c.id]=(state.inventory[c.id]||0)+1;AudioFX.coin();updateHUD();renderToolbar();save();openMarket();setTimeout(()=>document.querySelector('.tab[data-tab=buy]')?.click(),0);});}
+    else if(tab==='buy'){let rows='';Object.values(CROPS).filter(c=>!c.hybrid&&state.level>=c.unlock).forEach(c=>{rows+=`<div class="row"><span style="font-size:22px">${c.emoji}</span><div class="name">${c.name}</div><button class="btn" data-buy="${c.id}">${c.cost}🪙</button></div>`;});tabBox.innerHTML=rows;tabBox.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const c=CROPS[b.dataset.buy];if(state.coins<c.cost){toast('Мало монет');return;}state.coins-=c.cost;state.inventory[c.id]=(state.inventory[c.id]||0)+1;AudioFX.purchase();updateHUD();renderToolbar();save();openMarket();setTimeout(()=>document.querySelector('.tab[data-tab=buy]')?.click(),0);});}
     else if(tab==='craft'){let rows='<p>По 1 семени родителей.</p>';const seen=new Set();HYBRIDS.forEach(h=>{if(seen.has(h.result))return;seen.add(h.result);const r=CROPS[h.result];rows+=`<div class="row"><span style="font-size:22px">${r.emoji}</span><div class="name">${r.name}<div class="hint">${CROPS[h.a].emoji}+${CROPS[h.b].emoji}</div></div><button class="btn" data-craft="${h.result}">Скрестить</button></div>`;});tabBox.innerHTML=rows;tabBox.querySelectorAll('[data-craft]').forEach(b=>b.onclick=()=>{craft(b.dataset.craft);openMarket();setTimeout(()=>document.querySelector('.tab[data-tab=craft]')?.click(),0);});}
     else{let rows='';Object.values(ANIMAL_TYPES).forEach(t=>{rows+=`<div class="row"><span style="font-size:22px">${t.emoji}</span><div class="name">${t.name}<div class="hint">ур.${t.unlock}</div></div><button class="btn" data-an="${t.id}">${t.cost}🪙</button></div>`;});tabBox.innerHTML=rows;tabBox.querySelectorAll('[data-an]').forEach(b=>b.onclick=()=>{buyAnimal(b.dataset.an);openMarket();setTimeout(()=>document.querySelector('.tab[data-tab=animals]')?.click(),0);});}
   }
   document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>show(t.dataset.tab)));document.getElementById('mclose').onclick=closeModal;show('prices');
 }
-function openBook(){const nextH=HEART_THRESHOLDS.find(t=>t>state.heart)||'макс';let html=`<h2>📖 Книга фермера</h2><p><b>Сердце:</b> ${state.heart} (порог ${nextH}) · <b>Заказы:</b> ${state.ordersDone}</p><div class="story">${STORIES[state.storyIdx]}</div><p><b>Гибриды:</b> ${state.unlockedHybrids.map(id=>CROPS[id].emoji).join(' ')||'нет'}</p><p class="hint">Объёмная 2D-графика · тени · анимации</p><button class="btn ghost" id="chk-upd" style="width:100%;margin:6px 0">Проверить обновления</button><button class="btn danger" id="reset-save">Сбросить прогресс</button> <button class="btn ghost" id="bclose">Закрыть</button>`;openModal(html);document.getElementById('bclose').onclick=closeModal;document.getElementById('reset-save').onclick=()=>{localStorage.removeItem(SAVE_KEY);location.reload();};document.getElementById('chk-upd').onclick=async()=>{closeModal();toast('Проверка…');const r=await checkForUpdates();if(r.upToDate)toast('Актуальная версия');if(r.skipped)toast('Манифест: '+r.reason);};}
+function openBook(){const nextH=HEART_THRESHOLDS.find(t=>t>state.heart)||'макс';
+  const mv=Math.round((state.musicVol!=null?state.musicVol:AudioFX.getMusicVol())*100);
+  const sv=Math.round((state.sfxVol!=null?state.sfxVol:AudioFX.getSfxVol())*100);
+  let html=`<h2>📖 Книга фермера</h2><p><b>Сердце:</b> ${state.heart} (порог ${nextH}) · <b>Заказы:</b> ${state.ordersDone}</p><div class="story">${STORIES[state.storyIdx]}</div><p><b>Гибриды:</b> ${state.unlockedHybrids.map(id=>CROPS[id].emoji).join(' ')||'нет'}</p>
+  <h3 style="margin:12px 0 6px">🔊 Звук</h3>
+  <label style="display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px">Музыка <input id="vol-music" type="range" min="0" max="100" value="${mv}" style="flex:1"> <span id="vol-music-v">${mv}%</span></label>
+  <label style="display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px">Эффекты <input id="vol-sfx" type="range" min="0" max="100" value="${sv}" style="flex:1"> <span id="vol-sfx-v">${sv}%</span></label>
+  <label style="display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px"><input id="chk-mute" type="checkbox" ${state.muted?'checked':''}> Без звука</label>
+  <p class="hint">Объёмная 2D-графика · тени · звук</p>
+  <button class="btn ghost" id="chk-upd" style="width:100%;margin:6px 0">Проверить обновления</button><button class="btn danger" id="reset-save">Сбросить прогресс</button> <button class="btn ghost" id="bclose">Закрыть</button>`;
+  openModal(html);
+  AudioFX.unlockAudio();
+  const syncMuteBtn=()=>{document.getElementById('btn-mute').textContent=state.muted?'🔇':'🔊';};
+  document.getElementById('vol-music').oninput=(e)=>{const v=(+e.target.value)/100; state.musicVol=v; AudioFX.setMusicVol(v); document.getElementById('vol-music-v').textContent=e.target.value+'%'; save();};
+  document.getElementById('vol-sfx').oninput=(e)=>{const v=(+e.target.value)/100; state.sfxVol=v; AudioFX.setSfxVol(v); document.getElementById('vol-sfx-v').textContent=e.target.value+'%'; save();};
+  document.getElementById('chk-mute').onchange=(e)=>{state.muted=!!e.target.checked; AudioFX.setMuted(state.muted); syncMuteBtn(); save();};
+  document.getElementById('bclose').onclick=closeModal;
+  document.getElementById('reset-save').onclick=()=>{localStorage.removeItem(SAVE_KEY);location.reload();};
+  document.getElementById('chk-upd').onclick=async()=>{closeModal();toast('Проверка…');const r=await checkForUpdates();if(r.upToDate)toast('Актуальная версия');if(r.skipped)toast('Манифест: '+r.reason);};
+}
 
 function spawnPest(){if(state.pests.length>=7)return;if(state.scarecrows>0&&Math.random()<.4)return;const pe={id:Math.random().toString(36).slice(2),x:15+Math.random()*70,y:35+Math.random()*40};state.pests.push(pe);pe.timer=setTimeout(()=>{if(!state.pests.includes(pe))return;const cand=state.plots.map((p,i)=>({p,i})).filter(x=>x.p.cropId&&!x.p.locked&&x.p.zone===state.zone);if(cand.length){const pick=cand[Math.floor(Math.random()*cand.length)];pick.p.cropId=null;pick.p.plantedAt=0;pick.p.watered=false;pick.p.ready=false;toast('🐛 Урожай съеден!');}removePest(pe);},7500);}
 function squashPest(pe){state.coins+=4;addXp(2);if(Math.random()<.28){state.inventory.moonfl=(state.inventory.moonfl||0)+1;if(!state.unlockedHybrids.includes('moonfl'))state.unlockedHybrids.push('moonfl');toast('🌙 Лунный цветок!');}else toast('💥 +4🪙');AudioFX.hit();removePest(pe);updateHUD();renderToolbar();save();}
 function removePest(pe){clearTimeout(pe.timer);state.pests=state.pests.filter(x=>x!==pe);}
 
-function save(){const data={coins:state.coins,xp:state.xp,level:state.level,heart:state.heart,dayKey:state.dayKey,seasonIdx:state.seasonIdx,weather:state.weather,weatherUntil:state.weatherUntil,dayIndex:state.dayIndex,inventory:state.inventory,products:state.products,unlockedHybrids:state.unlockedHybrids,animals:state.animals,storyIdx:state.storyIdx,storiesRead:state.storiesRead,cycleStart:state.cycleStart,order:state.order,ordersDone:state.ordersDone,muted:state.muted,plots:state.plots.map(p=>({zone:p.zone,locked:p.locked,cropId:p.cropId,plantedAt:p.plantedAt,watered:p.watered,ready:p.ready}))};try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){}}
-function load(){try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return false;const d=JSON.parse(raw);Object.assign(state,{coins:d.coins,xp:d.xp,level:d.level,heart:d.heart,dayKey:d.dayKey||todayKey(),seasonIdx:d.seasonIdx||0,weather:d.weather||'clear',weatherUntil:d.weatherUntil||0,dayIndex:d.dayIndex||0,inventory:d.inventory||{},products:d.products||{},unlockedHybrids:d.unlockedHybrids||[],animals:d.animals||[],storyIdx:d.storyIdx||0,storiesRead:d.storiesRead||[0],cycleStart:d.cycleStart||Date.now(),order:d.order||null,ordersDone:d.ordersDone||0,muted:!!d.muted,plots:(d.plots||[]).map(p=>({...p,pop:0,sway:Math.random()*6}))});return true;}catch(e){return false;}}
+function save(){const data={coins:state.coins,xp:state.xp,level:state.level,heart:state.heart,dayKey:state.dayKey,seasonIdx:state.seasonIdx,weather:state.weather,weatherUntil:state.weatherUntil,dayIndex:state.dayIndex,inventory:state.inventory,products:state.products,unlockedHybrids:state.unlockedHybrids,animals:state.animals,storyIdx:state.storyIdx,storiesRead:state.storiesRead,cycleStart:state.cycleStart,order:state.order,ordersDone:state.ordersDone,muted:state.muted,musicVol:state.musicVol,sfxVol:state.sfxVol,plots:state.plots.map(p=>({zone:p.zone,locked:p.locked,cropId:p.cropId,plantedAt:p.plantedAt,watered:p.watered,ready:p.ready}))};try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));}catch(e){}}
+function load(){try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return false;const d=JSON.parse(raw);Object.assign(state,{coins:d.coins,xp:d.xp,level:d.level,heart:d.heart,dayKey:d.dayKey||todayKey(),seasonIdx:d.seasonIdx||0,weather:d.weather||'clear',weatherUntil:d.weatherUntil||0,dayIndex:d.dayIndex||0,inventory:d.inventory||{},products:d.products||{},unlockedHybrids:d.unlockedHybrids||[],animals:d.animals||[],storyIdx:d.storyIdx||0,storiesRead:d.storiesRead||[0],cycleStart:d.cycleStart||Date.now(),order:d.order||null,ordersDone:d.ordersDone||0,muted:!!d.muted,musicVol:d.musicVol!=null?d.musicVol:0.45,sfxVol:d.sfxVol!=null?d.sfxVol:0.7,plots:(d.plots||[]).map(p=>({...p,pop:0,sway:Math.random()*6}))});return true;}catch(e){return false;}}
 function refreshDay(){const d=todayKey();if(d!==state.dayKey){state.dayKey=d;genOrder();}state.mults=dailyMultipliers(state.dayKey);if(!state.order)genOrder();}
 
 let lastCycleBucket=-1;
-function tick(){updateGrowth();const night=isNight();setNight(night);if(night&&Math.random()<.035)spawnPest();const prog=((Date.now()-state.cycleStart)%DAY_MS)/DAY_MS;if(prog<.02&&lastCycleBucket>.5)advanceTimeChunk();lastCycleBucket=prog;updateHUD();renderOrder();if(Date.now()-state.lastSave>6000){state.lastSave=Date.now();save();}}
+function tick(){updateGrowth();const night=isNight();setNight(night);if(night&&Math.random()<.035)spawnPest();const prog=((Date.now()-state.cycleStart)%DAY_MS)/DAY_MS;if(prog<.02&&lastCycleBucket>.5)advanceTimeChunk();lastCycleBucket=prog;AudioFX.updateWorldAudio();AudioFX.maybeAnimalIdle(state.animals);updateHUD();renderOrder();if(Date.now()-state.lastSave>6000){state.lastSave=Date.now();save();}}
 function renderAll(){renderZones();renderToolbar();renderGrid();updateHUD();renderOrder();document.getElementById('story').textContent=STORIES[state.storyIdx];}
-function startGame(){document.getElementById('intro').style.display='none';setTimeout(()=>checkForUpdates().catch(()=>{}),800);AudioFX.setMuted(state.muted);document.getElementById('btn-mute').textContent=state.muted?'🔇':'🔊';refreshDay();ensurePlots();if(!state.weatherUntil)rollWeather();renderAll();GFX.start();setInterval(tick,450);save();}
+function startGame(){document.getElementById('intro').style.display='none';setTimeout(()=>checkForUpdates().catch(()=>{}),800);AudioFX.unlockAudio();AudioFX.setMusicVol(state.musicVol!=null?state.musicVol:0.45);AudioFX.setSfxVol(state.sfxVol!=null?state.sfxVol:0.7);AudioFX.setMuted(state.muted);document.getElementById('btn-mute').textContent=state.muted?'🔇':'🔊';refreshDay();ensurePlots();if(!state.weatherUntil)rollWeather();renderAll();GFX.start();AudioFX.updateWorldAudio(true);setInterval(tick,450);save();}
 
 document.getElementById('btn-market').onclick=openMarket;
 document.getElementById('btn-book').onclick=openBook;
-document.getElementById('btn-mute').onclick=()=>{state.muted=!state.muted;AudioFX.setMuted(state.muted);document.getElementById('btn-mute').textContent=state.muted?'🔇':'🔊';save();};
+document.getElementById('btn-mute').onclick=()=>{AudioFX.unlockAudio();state.muted=!state.muted;AudioFX.setMuted(state.muted);document.getElementById('btn-mute').textContent=state.muted?'🔇':'🔊';save();};
 GFX.drawIntro();
 const hasSave=load();
 if(hasSave){document.getElementById('btn-continue').style.display='block';document.getElementById('btn-continue').onclick=startGame;document.getElementById('btn-start').textContent='Новая игра';document.getElementById('btn-start').onclick=()=>{localStorage.removeItem(SAVE_KEY);location.reload();};}
 else document.getElementById('btn-start').onclick=startGame;
 
-const APP_VERSION={version: '1.6.0',versionCode: 10600,webVersion: '1.6.0'};
+const APP_VERSION={version: '1.7.0',versionCode: 10700,webVersion: '1.7.0'};
 const DEFAULT_MANIFEST_URL=localStorage.getItem('farm_manifest_url')||'https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/version.json';
 function cmpSemver(a,b){const pa=String(a||'0').split('.').map(n=>parseInt(n,10)||0);const pb=String(b||'0').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){const d=(pa[i]||0)-(pb[i]||0);if(d)return d;}return 0;}
 function getAppUpdatePlugin(){try{const C=window.Capacitor;if(!C)return null;if(C.Plugins&&C.Plugins.AppUpdate)return C.Plugins.AppUpdate;if(typeof C.registerPlugin==='function')return C.registerPlugin('AppUpdate');}catch(e){}return null;}

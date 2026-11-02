@@ -1,11 +1,12 @@
 {
   "appId": "com.farmedge.world",
-  "appName": "Ферма на краю света",
+  "appName": "\u0424\u0435\u0440\u043c\u0430 \u043d\u0430 \u043a\u0440\u0430\u044e \u0441\u0432\u0435\u0442\u0430",
   "webDir": "www",
   "server": {
     "androidScheme": "https"
   },
   "android": {
-    "allowMixedContent": true
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": false
   }
 }

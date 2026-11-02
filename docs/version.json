@@ -1,9 +1,9 @@
 {
-  "version": "1.6.0",
-  "versionCode": 10600,
+  "version": "1.7.0",
+  "versionCode": 10700,
   "apkUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/farm-edge-world-debug.apk",
-  "webVersion": "1.6.0",
+  "webVersion": "1.7.0",
   "webBundleUrl": "https://github.com/alexpoleo19772301-boop/farm-edge-world/releases/latest/download/www.zip",
   "force": false,
-  "changelog": "• v1.6.0: снова плавающий остров (как в v1.4), заметно шире (~на всю ширину поля) и ниже — меньше пустоты снизу\n• Сохранены чистые спрайты без magenta-ореолов из v1.5\n• Объекты разнесены, сетка грядок на острове, тень/объём утёса\n• Сохранения и RU без изменений"
+  "changelog": "• v1.7.0: настоящий звук — музыка дня/ночи, амбиент (птицы/сверчки/дождь/шторм), SFX (тап, посадка, полив, урожай, монета, покупка, уровень, животные, вредитель…)\n• Громкость музыки/эффектов и mute в «Книге», сохраняются\n• Разблокировка Web Audio по первому касанию; пауза в фоне; Android mediaPlaybackRequiresUserGesture=false\n• Аудио CC0 (синтез), см. CREDITS.md · ~320KB ogg"
 }
